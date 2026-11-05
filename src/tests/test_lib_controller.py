@@ -1,7 +1,8 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from currency_quote import ClientBuilder
+from currency_quote import ClientBuilder, CurrencyQuoteClient
 from currency_quote.domain.entities.currency import CurrencyQuote, CurrencyObject
+from currency_quote.exceptions import InvalidDateError
 
 
 @pytest.fixture
@@ -20,13 +21,13 @@ def test_client_methods_simple():
     """Test basic functionality of client methods without mocking."""
     # Create client with direct approaches to avoid complex mocking
     client = ClientBuilder(currency_list=["USD-BRL"])
-    
+
     # Check that the methods exist and return the right types
-    assert hasattr(client, 'get_last_quote')
-    assert hasattr(client, 'get_history_quote')
-    
+    assert hasattr(client, "get_last_quote")
+    assert hasattr(client, "get_history_quote")
+
     # Simple validation of signatures
-    assert 'reference_date' in client.get_history_quote.__code__.co_varnames
+    assert "reference_date" in client.get_history_quote.__code__.co_varnames
 
 
 def test_instantiate_with_different_inputs():
@@ -36,7 +37,7 @@ def test_instantiate_with_different_inputs():
     assert client1.currency_list == "USD-BRL"
     assert isinstance(client1.currency_obj, CurrencyObject)
     assert client1.currency_obj.get_currency_list() == ["USD-BRL"]
-    
+
     # Test with list
     client2 = ClientBuilder(currency_list=["USD-BRL", "EUR-BRL"])
     assert client2.currency_list == ["USD-BRL", "EUR-BRL"]
@@ -46,17 +47,20 @@ def test_instantiate_with_different_inputs():
     assert len(client2.currency_obj.get_currency_list()) == 2
 
 
+def test_client_builder_is_alias_of_currency_quote_client():
+    """The legacy name must keep working."""
+    assert ClientBuilder is CurrencyQuoteClient
+    assert isinstance(CurrencyQuoteClient("USD-BRL"), ClientBuilder)
+
+
+def test_currencies_property_returns_normalized_pairs():
+    client = CurrencyQuoteClient("usd/brl")
+    assert client.currencies == ["USD-BRL"]
+
+
 def test_invalid_reference_date():
-    """Test get_history_quote with invalid reference date."""
-    with patch('currency_quote.application.use_cases.validate_currency.ValidateCurrencyUseCase.execute') as mock_validate:
-        with patch('currency_quote.application.use_cases.get_history_currency_quote.GetHistCurrencyQuoteUseCase.execute') as mock_hist_quote:
-            # Configure mocks
-            mock_validate.return_value = MagicMock()
-            mock_hist_quote.return_value = []
-            
-            # Create client and call with invalid date
-            client = ClientBuilder(currency_list=["USD-BRL"])
-            result = client.get_history_quote(reference_date=99999999)
-            
-            # Should return empty list
-            assert result == []
+    """get_history_quote must raise instead of silently returning []."""
+    client = ClientBuilder(currency_list=["USD-BRL"])
+
+    with pytest.raises(InvalidDateError):
+        client.get_history_quote(reference_date=99999999)

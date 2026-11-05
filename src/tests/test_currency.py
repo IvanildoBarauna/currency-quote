@@ -66,6 +66,32 @@ def test_currency_object_with_mixed_valid_invalid():
         CurrencyObject(currency_list=["USD-BRL", "INVALID"])
 
 
+def test_currency_object_normalizes_case_and_separator():
+    """Input is normalized so 'usd/brl' and 'USD-BRL' are equivalent."""
+    assert CurrencyObject("usd/brl").get_currency_list() == ["USD-BRL"]
+    assert CurrencyObject(" eur_brl ").get_currency_list() == ["EUR-BRL"]
+
+
+def test_currency_object_removes_duplicates_preserving_order():
+    client = CurrencyObject(["USD-BRL", "EUR-BRL", "usd-brl"])
+    assert client.get_currency_list() == ["USD-BRL", "EUR-BRL"]
+
+
+def test_currency_object_rejects_non_alphabetic_codes():
+    with pytest.raises(ValueError):
+        CurrencyObject(["US1-BRL"])
+
+
+def test_currency_object_is_iterable_and_sized():
+    client = CurrencyObject(["USD-BRL", "EUR-BRL"])
+    assert len(client) == 2
+    assert list(client) == ["USD-BRL", "EUR-BRL"]
+
+
+def test_currency_object_equality():
+    assert CurrencyObject("USD-BRL") == CurrencyObject("usd-brl")
+
+
 def test_currency_quote_creation():
     """Test creation of CurrencyQuote object with valid data."""
     quote = CurrencyQuote(
@@ -75,9 +101,9 @@ def test_currency_quote_creation():
         quote_currency_code="BRL",
         quote_timestamp=1614024000,
         bid_price=5.0876,
-        ask_price=5.0891
+        ask_price=5.0891,
     )
-    
+
     # Verify all attributes are set correctly
     assert quote.currency_pair == "USD-BRL"
     assert quote.currency_pair_name == "Dólar Americano/Real Brasileiro"

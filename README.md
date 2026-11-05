@@ -1,106 +1,117 @@
 # currency-quote
 
-> Complete solution for extracting currency pair quotes data.
+**Real-time and historical currency exchange rates for Python.** Fetch currency pairs from [AwesomeAPI](https://docs.awesomeapi.com.br/api-de-moedas), with typed results, retries, validation, date ranges, a CLI, and optional pandas integration. No API key required.
 
-[![PyPI - Status](https://img.shields.io/pypi/status/currency-quote?style=for-the-badge&logo=pypi)](https://pypi.org/project/currency-quote/)
-[![PyPI - Version](https://img.shields.io/pypi/v/currency-quote?style=for-the-badge&logo=pypi)](https://pypi.org/project/currency-quote/#history)
-[![PyPI - Downloads](https://img.shields.io/pypi/dm/currency-quote?style=for-the-badge&logo=pypi)](https://pypi.org/project/currency-quote/)
-![PyPI - Python Version](https://img.shields.io/pypi/pyversions/currency-quote?style=for-the-badge&logo=python)
+[![PyPI version](https://img.shields.io/pypi/v/currency-quote)](https://pypi.org/project/currency-quote/)
+[![Python versions](https://img.shields.io/pypi/pyversions/currency-quote)](https://pypi.org/project/currency-quote/)
+[![Downloads](https://img.shields.io/pypi/dm/currency-quote)](https://pypi.org/project/currency-quote/)
+[![Tests](https://github.com/IvanildoBarauna/currency-quote/actions/workflows/CI.yaml/badge.svg)](https://github.com/IvanildoBarauna/currency-quote/actions/workflows/CI.yaml)
 
-[![CI](https://img.shields.io/github/actions/workflow/status/ivdatahub/currency-quote/CI.yaml?&style=for-the-badge&logo=githubactions&cacheSeconds=60&label=Tests+and+pre+build)](https://github.com/ivdatahub/currency-quote/actions/workflows/CI.yaml)
-[![CD](https://img.shields.io/github/actions/workflow/status/ivdatahub/currency-quote/CD.yaml?&style=for-the-badge&logo=githubactions&cacheSeconds=60&event=release&label=Package+publication)](https://github.com/ivdatahub/currency-quote/actions/workflows/CD.yaml)
-[![Codecov](https://img.shields.io/codecov/c/github/ivdatahub/currency-quote?style=for-the-badge&logo=codecov)](https://app.codecov.io/gh/ivdatahub/currency-quote)
+## Installation
 
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/ivanildobarauna-dev/currency-quote)
+Requires Python 3.9 or newer.
 
----
+```bash
+pip install currency-quote
+# or, for DataFrame support:
+pip install "currency-quote[pandas]"
+```
 
-## Stack
-
-![Python](https://img.shields.io/badge/-Python-05122A?style=flat&logo=python)&nbsp;
-![Poetry](https://img.shields.io/badge/-Poetry-05122A?style=flat&logo=poetry)&nbsp;
-![pytest](https://img.shields.io/badge/-pytest-05122A?style=flat&logo=pytest)&nbsp;
-![GitHub Actions](https://img.shields.io/badge/-GitHub_Actions-05122A?style=flat&logo=githubactions)&nbsp;
-![CodeCov](https://img.shields.io/badge/-CodeCov-05122A?style=flat&logo=codecov)&nbsp;
-![pypi](https://img.shields.io/badge/-pypi-05122A?style=flat&logo=pypi)&nbsp;
-
----
-
-## Quick Start
+## Quick start
 
 ```python
-from currency_quote import ClientBuilder
+from currency_quote import CurrencyQuoteClient
 
-# Single currency pair
-client = ClientBuilder(currency_list="USD-BRL")
+client = CurrencyQuoteClient(["USD-BRL", "EUR-BRL"])
 
-# Multiple currency pairs
-client = ClientBuilder(currency_list=["USD-BRL", "EUR-BRL"])
+# Current quotes (one request for all pairs)
+quotes = client.get_last_quote()
+for quote in quotes:
+    print(quote.currency_pair, quote.bid_price, quote.ask_price)
+    print("Spread:", quote.spread, "Midpoint:", quote.mid_price)
 
-# Get the latest quote
-print(client.get_last_quote())
+# Historical close on one day (date, datetime, YYYYMMDD int or string)
+history = client.get_history_quote("2024-06-26")
 
-# Get historical quote for a specific date (YYYYMMDD)
-print(client.get_history_quote(reference_date=20220101))
+# Inclusive date range (daily closes; weekends/holidays may have no data)
+series = client.get_history_range("2024-06-01", "2024-06-30")
+print(series.to_dict())       # list[dict]
+print(series.to_json())       # JSON string
+print(series.to_dataframe())  # requires currency-quote[pandas]
 ```
 
-### Last quote response
+Pairs are normalized: `"usd/brl"`, `"USD_BRL"`, and `"USD-BRL"` all resolve to `USD-BRL`. Invalid pairs are filtered out by default; if *all* pairs are unavailable, a `CurrencyNotFoundError` is raised. Use `client.currencies` to inspect normalized inputs.
 
-```json
-[
-  {
-    "currency_pair": "USD-BRL",
-    "currency_pair_name": "Dólar Americano/Real Brasileiro",
-    "base_currency_code": "USD",
-    "quote_currency_code": "BRL",
-    "quote_timestamp": 1727201744,
-    "bid_price": "5.4579",
-    "ask_price": "5.4589",
-    "quote_extracted_at": 1727201753
-  }
-]
+Results are `QuoteList` objects, a subclass of `list[CurrencyQuote]`. `CurrencyQuote` supports both attribute access (`quote.bid_price`) and mapping-style access (`quote["bid_price"]`); prices are `float`, timestamps are Unix seconds. `quote.quote_datetime` is a local, timezone-naive `datetime`. Historical data is returned in provider order (newest first per pair). Use `.filter_by_pair("USD-BRL")` or `.pairs` when working with multiple currencies.
+
+> **Upgrading from v5:** `ClientBuilder` remains an alias of `CurrencyQuoteClient`, but `get_last_quote()` and `get_history_quote()` now return typed quotes rather than plain dictionaries; use `.to_dict()` to recover `list[dict]`. Bid/ask prices are consistently floats. Invalid dates now raise `InvalidDateError` instead of silently returning `[]`. If you rely on exact return types, treat this as a breaking change.
+
+## Command line
+
+```bash
+currency-quote USD-BRL
+currency-quote USD-BRL EUR-BRL --json
+currency-quote USD-BRL --date 2024-06-26 --csv
+currency-quote USD-BRL --start 2024-06-01 --end 2024-06-30 --csv
+currency-quote USD-BRL --timeout 30 --retries 5 --no-validate
 ```
 
-### Historical quote response
+The CLI exits with status 0 on success, 1 on a lookup error, and 2 on incompatible flags. Run `currency-quote --help` for all options.
 
-```json
-[
-  {
-    "currency_pair": "USD-BRL",
-    "currency_pair_name": "Dólar Americano/Real Brasileiro",
-    "base_currency_code": "USD",
-    "quote_currency_code": "BRL",
-    "quote_timestamp": 1719440767,
-    "bid_price": 5.524,
-    "ask_price": 5.5245,
-    "quote_extracted_at": 1727201753
-  }
-]
+## Configuration and error handling
+
+```python
+from currency_quote import (
+    CurrencyQuoteClient, RequestConfig, RetryStrategy,
+    CurrencyQuoteError, InvalidDateError, QuoteFetchError,
+)
+
+client = CurrencyQuoteClient(
+    "USD-BRL",
+    config=RequestConfig(
+        retry_strategy=RetryStrategy.EXPONENTIAL,
+        retries=5,
+        initial_delay=2,
+        timeout=30,       # connection timeout, in seconds
+        max_workers=4,    # parallel history requests
+    ),
+    validate=False,       # skip availability lookup if pairs are known
+)
+
+try:
+    quotes = client.get_last_quote()
+except InvalidDateError:
+    ...  # malformed, current, or future date (for historical queries)
+except QuoteFetchError:
+    ...  # network or upstream response failure
+except CurrencyQuoteError:
+    ...  # any other error from this package
 ```
 
----
+By default, the list of available currency pairs is cached in memory for one hour; call `clear_available_parities_cache()` from `currency_quote` to refresh it. The cache is process-local and is not shared across workers. HTTP requests use `api-to-dataframe` underneath. The data source may enforce rate limits and availability windows; currency-quote does not provide an SLA or a guaranteed historical archive.
 
-## Architecture
+### Async applications
 
-This library follows **Hexagonal Architecture** (ports & adapters), decoupling core business logic from external data sources so any API can be swapped without touching domain code.
+```python
+quotes = await client.get_last_quote_async()
+history = await client.get_history_quote_async("2024-06-26")
+series = await client.get_history_range_async("2024-06-01", "2024-06-30")
+```
 
-![Hexagonal Design](./hexagonal_design_arch.png)
+These methods offload the synchronous HTTP client to a worker thread (Python 3.9+). They do not provide native async HTTP or cancel an in-flight request when the task is cancelled.
 
----
+### Alternative data sources
 
-## Highlights
+You can pass a repository class implementing `ICurrencyRepository` (from `currency_quote.application.ports.outbound.currency_repository`) via `repository=MyRepository`. Set `validate=False` when using a different provider: the default pair validator checks AwesomeAPI's list. The repository constructor accepts `(CurrencyObject, RequestConfig)` and implements `get_last_quote()`, `get_history_quote(reference_date)` and `get_history_quote_range(start_date, end_date)`, returning `QuoteList` objects.
 
-| Feature | Description |
-|---|---|
-| **Parameter Validation** | Currency pairs are validated against the data source before any request |
-| **Retry Strategy** | Configurable retry logic with exponential and linear backoff |
-| **Hexagonal Architecture** | Core logic fully decoupled from external APIs |
-| **CI/CD** | Automated testing, build, and PyPI publication pipelines |
-| **Code Quality** | Black formatting + Pylint enforced on every commit |
+## Development
 
----
+```bash
+poetry install
+poetry run pytest
+poetry run black --check src
+poetry run pylint src/currency_quote
+poetry build
+```
 
-## Contributing
-
-- [Contributing Guide](https://github.com/ivdatahub/currency-quote/blob/main/CONTRIBUTING.md)
-- [Code of Conduct](https://github.com/ivdatahub/currency-quote/blob/main/CODE_OF_CONDUCT.md)
+Contributions are welcome: see [CONTRIBUTING.md](https://github.com/IvanildoBarauna/currency-quote/blob/main/CONTRIBUTING.md), [CHANGELOG.md](https://github.com/IvanildoBarauna/currency-quote/blob/main/CHANGELOG.md) and [SECURITY.md](https://github.com/IvanildoBarauna/currency-quote/blob/main/SECURITY.md). Licensed under [MIT](LICENSE).
