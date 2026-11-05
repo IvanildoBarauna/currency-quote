@@ -1,12 +1,12 @@
-# Contributing to ETL-awesome-api
+# Contributing to currency-quote
 
-Firstly, thank you very much for your interest in contributing to ETL-awesome-api! This document provides guidelines to help ensure the contribution process is smooth and efficient for everyone involved.
+Thank you for your interest in contributing to currency-quote! This document provides guidelines to help ensure the contribution process is smooth and efficient for everyone involved.
 
 ## How to Contribute
 
 ### 1. Fork the Repository
 
-1. Go to [repository page](https://github.com/IvanildoBarauna/ETL-awesome-api).
+1. Go to the [repository page](https://github.com/IvanildoBarauna/currency-quote).
 2. Click the "Fork" button in the top right corner to create a copy of the repository on your GitHub.
 
 ### 2. Clone the Repository
@@ -14,7 +14,7 @@ Firstly, thank you very much for your interest in contributing to ETL-awesome-ap
 Clone the forked repository to your local machine using the command:
 
 ```sh
-git clone https://github.com/your-username/currency-quote-wrapper.git
+git clone https://github.com/your-username/currency-quote.git
 ```
 
 ### 3. Create a Branch
@@ -67,7 +67,7 @@ git push origin branchname
 
 ## Reporting Bugs
 
-If you find a bug, please open an [issue](https://github.com/IvanildoBarauna/ETL-awesome-api/issues) and provide as much information as possible, including:
+If you find a bug, please open an [issue](https://github.com/IvanildoBarauna/currency-quote/issues) and provide as much information as possible, including:
 
 - Detailed description of the problem.
 - Steps to reproduce the issue.
@@ -76,8 +76,8 @@ If you find a bug, please open an [issue](https://github.com/IvanildoBarauna/ETL
 
 ## Improvement suggestions
 
-If you have suggestions for improvements, please open an [issue](https://github.com/IvanildoBarauna/ETL-awesome-api/issues) and describe your idea in detail.
+If you have suggestions for improvements, please open an [issue](https://github.com/IvanildoBarauna/currency-quote/issues) and describe your idea in detail.
 
 ## Thanks
 
-Thanks for considering contributing to ETL-awesome-api! Every contribution is valuable and helps to improve the project.
+Thanks for considering contributing to currency-quote! Every contribution is valuable and helps to improve the project.

@@ -21,16 +21,15 @@ def test_valid_currency():
 
 
 def test_partial_valid_currency():
-    """Test validation with some invalid currencies."""
+    """Reject invalid pairs rather than quietly returning partial results."""
     currency_list = ["USD-BRL", "USD-BRLT", "AAA-BBB"]
     currency_quote = CurrencyObject(currency_list)
     expected_result = ["USD-BRL", "USD-BRLT"]
     
     # Mock the validator API to return only valid currencies
     with patch.object(CurrencyValidatorAPI, 'validate_currency_code', return_value=expected_result):
-        result = ValidateCurrencyUseCase.execute(currency_quote=currency_quote)
-        assert result.get_currency_list() == expected_result
-        assert isinstance(result, CurrencyObject)
+        with pytest.raises(ValueError, match="AAA-BBB"):
+            ValidateCurrencyUseCase.execute(currency_quote=currency_quote)
 
 
 def test_all_invalid_currencies():

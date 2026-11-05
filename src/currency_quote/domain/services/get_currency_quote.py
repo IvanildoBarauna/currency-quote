@@ -6,6 +6,7 @@ from currency_quote.application.use_cases.validate_currency import (
     ValidateCurrencyUseCase,
 )
 from currency_quote.domain.entities.currency import CurrencyQuote, CurrencyObject
+from currency_quote.domain.services.validate_reference_date import validate_reference_date
 
 
 class GetCurrencyQuoteService:
@@ -21,6 +22,7 @@ class GetCurrencyQuoteService:
         return last_quote
 
     def history(self, reference_date: int) -> List[CurrencyQuote]:
+        validate_reference_date(reference_date)
         return self.currency_repository(
             self.validate_currency_code()
         ).get_history_quote(reference_date=reference_date)

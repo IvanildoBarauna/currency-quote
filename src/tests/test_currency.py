@@ -37,7 +37,7 @@ def test_currency_object_with_empty_str():
 
 def test_currency_object_with_invalid_currency_code():
     """Test CurrencyObject with invalid currency code (too short)."""
-    with pytest.raises(ValueError, match="Each currency code must have 3 characters"):
+    with pytest.raises(ValueError, match="Each currency code must have 3 or 4 characters"):
         CurrencyObject(currency_list=["USD-BR"])
 
 

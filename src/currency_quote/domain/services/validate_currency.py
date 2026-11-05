@@ -37,8 +37,11 @@ class CurrencyValidatorService:
             logger.error("All currency params are invalid: %s", self.currency_list)
             raise ValueError(f"All params: {self.currency_list} are invalid.")
 
-        if len(validated_list) < len(self.currency_list):
-            invalid_currencies = set(self.currency_list) - set(validated_list)
+        invalid_currencies = [
+            currency for currency in self.currency_list if currency not in validated_list
+        ]
+        if invalid_currencies:
             logger.warning("Invalid currency params: %s", invalid_currencies)
+            raise ValueError(f"Invalid currency pairs: {invalid_currencies}")
 
         return CurrencyObject(validated_list)

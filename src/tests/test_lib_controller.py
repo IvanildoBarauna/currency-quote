@@ -48,15 +48,8 @@ def test_instantiate_with_different_inputs():
 
 def test_invalid_reference_date():
     """Test get_history_quote with invalid reference date."""
-    with patch('currency_quote.application.use_cases.validate_currency.ValidateCurrencyUseCase.execute') as mock_validate:
-        with patch('currency_quote.application.use_cases.get_history_currency_quote.GetHistCurrencyQuoteUseCase.execute') as mock_hist_quote:
-            # Configure mocks
-            mock_validate.return_value = MagicMock()
-            mock_hist_quote.return_value = []
-            
-            # Create client and call with invalid date
-            client = ClientBuilder(currency_list=["USD-BRL"])
-            result = client.get_history_quote(reference_date=99999999)
-            
-            # Should return empty list
-            assert result == []
+    with patch('currency_quote.adapters.inbound.lib_controller.GetHistCurrencyQuoteUseCase.execute') as mock_hist_quote:
+        client = ClientBuilder(currency_list=["USD-BRL"])
+        with pytest.raises(ValueError, match="reference_date"):
+            client.get_history_quote(reference_date=99999999)
+        mock_hist_quote.assert_not_called()

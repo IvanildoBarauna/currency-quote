@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "currency-quote"
 version = "5.0.7"
-description = "Complete solution for extracting currency pair quotes data. With comprehensive testing, parameter validation, flexible configuration management, Hexagonal Architecture, CI/CD pipelines, code quality tools, and detailed documentation."
+description = "Fetch current and historical currency pair quotes from AwesomeAPI with a simple Python client."
 authors = ["IvanildoBarauna <ivanildo.jnr@outlook.com>"]
 readme = "README.md"
 license = "MIT"
@@ -11,16 +11,20 @@ classifiers=[
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 
 
 [tool.poetry.urls]
-Homepage = "https://pypi.org/project/currency-quote-wrapper"
-ArchDesign = "https://github.com/IvanildoBarauna/currency-quote-wrapper/blob/main/hexagonal_design_arch.png"
-Repository = "https://github.com/IvanildoBarauna/currency-quote-wrapper"
-README = "https://github.com/IvanildoBarauna/currency-quote-wrapper/blob/main/README.md"
-Issues = "https://github.com/IvanildoBarauna/currency-quote-wrapper/issues"
+Homepage = "https://pypi.org/project/currency-quote/"
+ArchDesign = "https://github.com/IvanildoBarauna/currency-quote/blob/main/hexagonal_design_arch.png"
+Repository = "https://github.com/IvanildoBarauna/currency-quote"
+README = "https://github.com/IvanildoBarauna/currency-quote/blob/main/README.md"
+Issues = "https://github.com/IvanildoBarauna/currency-quote/issues"
 
 
 [tool.setuptools.packages.find]
@@ -29,7 +33,6 @@ include = ["currency_quote*"]
 
 [tool.poetry.dependencies]
 python = "^3.9"
-pytest = "^8.3.4"
 api-to-dataframe = "^2.0.0"
 
 [tool.poetry.group.dev.dependencies]

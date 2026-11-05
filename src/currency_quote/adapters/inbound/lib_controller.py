@@ -7,6 +7,7 @@ from currency_quote.application.use_cases.get_history_currency_quote import (
     GetHistCurrencyQuoteUseCase,
 )
 from currency_quote.domain.entities.currency import CurrencyObject
+from currency_quote.domain.services.validate_reference_date import validate_reference_date
 
 
 class ClientBuilder(IController):
@@ -38,6 +39,7 @@ class ClientBuilder(IController):
         return controller_return
 
     def get_history_quote(self, reference_date: int) -> list:
+        validate_reference_date(reference_date)
         use_case_result = GetHistCurrencyQuoteUseCase.execute(
             currency_obj=self.currency_obj,
             reference_date=reference_date,
