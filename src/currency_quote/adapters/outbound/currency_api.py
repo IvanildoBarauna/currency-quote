@@ -27,11 +27,26 @@ def _as_decimal(value: object, field: str) -> Decimal:
         raise CurrencyAPIError(f"Malformed provider field {field}: {value!r}") from exc
 
 
+def _as_timestamp(value: object) -> int:
+    """Normalize provider Unix seconds or 13-digit milliseconds to seconds."""
+    if isinstance(value, bool):
+        raise CurrencyAPIError("Malformed provider field timestamp: boolean")
+    try:
+        timestamp = int(value)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise CurrencyAPIError(
+            f"Malformed provider field timestamp: {value!r}"
+        ) from exc
+    if 10**12 <= abs(timestamp) < 10**15:
+        return timestamp // 1000
+    return timestamp
+
+
 def _quote(pair: str, payload: object) -> CurrencyQuote:
     if not isinstance(payload, Mapping):
         raise CurrencyAPIError(f"Malformed quote for {pair}: expected an object")
     try:
-        timestamp = int(payload["timestamp"])
+        timestamp = _as_timestamp(payload["timestamp"])
         base, target = pair.split("-")
         name = payload.get("name") or f"{base}/{target}"
         return CurrencyQuote(

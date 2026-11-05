@@ -23,6 +23,10 @@ for the public API, [CONTRIBUTING.md](CONTRIBUTING.md) for contribution steps an
 - `CurrencyQuoteClient.get_history_range(start, end)` is inclusive, groups by
   requested pair and orders each pair newest-first. Deduplicate and filter
   provider responses by their local trading dates.
+- AwesomeAPI historical records may have 13-digit millisecond timestamps and
+  omit `create_date`. Normalize them to Unix seconds before computing the
+  trading date, deduplicating, sorting or returning `quote_timestamp`; preserve
+  second-based records. Cover both shapes in offline regression tests.
 
 ## Architecture and dependencies
 

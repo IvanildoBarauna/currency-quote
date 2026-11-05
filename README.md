@@ -30,6 +30,10 @@ with CurrencyQuoteClient("USD-BRL") as client:
 
 `CurrencyQuoteClient` accepts `"USD-BRL"` or a list of pairs; surrounding whitespace and case are normalized, and duplicates are removed. Results are `list`-like `QuoteList[CurrencyQuote]`; `bid_price`, `ask_price` and optional high/low/change values are `Decimal`. `to_dict()` returns JSON-ready decimal strings and the original eight-field schema. Supported dates: `YYYYMMDD` integers or strings, `YYYY-MM-DD`, `DD/MM/YYYY` and Python `date`/`datetime`. A historical date must precede **today in America/Sao_Paulo**. Historical ranges include both endpoints and return newest-first records grouped by requested pair; days without provider records are omitted (some weekend dates do have records).
 
+`quote_timestamp` and `quote_extracted_at` are Unix **seconds**. The adapter also
+accepts provider history records with millisecond timestamps and normalizes
+them to seconds before date filtering, ordering and serialization.
+
 Both methods validate pairs against the provider by default. A per-client one-hour cache avoids fetching the available-pairs list for every call. Use `validate=False` to skip this lookup when your pairs are known; `timeout`, `retries` (extra attempts beyond the first) and `cache_ttl` can be set when constructing the client. A pooled HTTP connection is shared between validation and quotes. `repository=` and `validator=` accept implementations of the outbound ports for testing or alternate providers. Caller-injected HTTP sessions are not closed by the client.
 
 **Failure behavior is strict:** if any pair is invalid, missing from a current response, or has no data in the requested historical day/range, the whole call raises an exception rather than silently returning a partial result. A range with data in some windows and no data in others succeeds with available records. `CurrencyQuoteError` catches all expected library failures; subclasses `InvalidCurrencyError`, `InvalidCurrencyTypeError`, `InvalidDateError`, `InvalidConfigError`, `NoDataForDateError` and `CurrencyAPIError` allow targeted handling. Provider outages, timeouts and malformed JSON produce `CurrencyAPIError`.

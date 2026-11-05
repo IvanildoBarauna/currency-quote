@@ -17,6 +17,7 @@ historical versions, not the v6 dependency set.
 - Keep the legacy eight-key `ClientBuilder` dictionary shape. **Breaking:** historical price floats become decimal strings; missing/invalid results now raise typed errors. See README migration notes.
 - Correct PyPI metadata, broaden Python CI and stop the closed-PR publication workflow from running on unmerged PRs.
 - Ship `tzdata` on all platforms for minimal containers; remove automatic Claude Code Review from PR-open events. A merged PR with `deployable` starts CD, subject to `Production` environment approval.
+- Normalize provider history timestamps expressed in milliseconds to Unix seconds before filtering, ordering and exposing them to callers.
 
 ### [4.0.0](https://github.com/IvanildoBarauna/currency-quote/compare/3.2.8...4.0.0)
 

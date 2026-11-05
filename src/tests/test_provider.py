@@ -71,6 +71,35 @@ def test_history_windows_skip_empty_deduplicate_and_filter():
     assert "end_date=20260101" in http.get.call_args_list[-1].args[0]
 
 
+@pytest.mark.parametrize("timestamp", ["1538050140", "1538050140000"])
+def test_history_normalizes_documented_timestamp_units(timestamp):
+    http = Mock()
+    # Historical entries after the first may omit create_date altogether.
+    http.get.return_value = [{"timestamp": timestamp, "bid": "4.00", "ask": "4.01"}]
+    quotes = CurrencyAPI(http).get_history(
+        "USD-BRL", date(2018, 9, 27), date(2018, 9, 27)
+    )
+    assert len(quotes) == 1
+    assert quotes[0].quote_timestamp == 1538050140
+    assert quotes[0].to_dict()["quote_timestamp"] == 1538050140
+
+
+def test_history_deduplicates_mixed_seconds_and_milliseconds():
+    http = Mock()
+    http.get.return_value = [
+        {"timestamp": "1538050140", "bid": "4.00", "ask": "4.01"},
+        {"timestamp": "1538050140000", "bid": "4.00", "ask": "4.01"},
+    ]
+    assert (
+        len(
+            CurrencyAPI(http).get_history(
+                "USD-BRL", date(2018, 9, 27), date(2018, 9, 27)
+            )
+        )
+        == 1
+    )
+
+
 def test_single_day_empty_response_is_handled_by_use_case():
     from currency_quote import CurrencyQuoteClient
 
@@ -124,7 +153,7 @@ def test_parities_cache_expires(monkeypatch):
 def test_invalid_history_entry_is_typed():
     http = Mock()
     http.get.return_value = [{"timestamp": "bad", "bid": "5.1", "ask": "5.2"}]
-    with pytest.raises(CurrencyAPIError, match="Malformed quote"):
+    with pytest.raises(CurrencyAPIError, match="Malformed provider field timestamp"):
         CurrencyAPI(http).get_history("USD-BRL", date(2024, 6, 3), date(2024, 6, 3))
 
 
