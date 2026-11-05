@@ -8,6 +8,7 @@ on:
 
 jobs:
   publish:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     uses: ivanildobarauna/github-workflows/.github/workflows/publish-python-package.yml@v1
     with:
       python-version: "3.9"

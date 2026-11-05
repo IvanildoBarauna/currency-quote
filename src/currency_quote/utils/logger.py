@@ -1,35 +1,20 @@
+"""Opt-in package logging; importing the library never configures the app."""
+
 import logging
 
-# Configure the root logger
-def setup_logging(level=logging.INFO):
-    """
-    Setup logging configuration for the currency_quote package.
 
-    Args:
-        level: The logging level. Default is INFO.
-    """
-    logger = logging.getLogger("currency_quote")
-    logger.setLevel(level)
-
-    # Avoid adding handlers multiple times
-    if not logger.handlers:
-        handler = logging.StreamHandler()
-        formatter = logging.Formatter('[%(asctime)s] %(levelname)s - %(name)s - %(message)s')
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-
-    return logger
-
-# Get a named logger
-def get_logger(name):
-    """
-    Get a logger with the specified name.
-
-    Args:
-        name: The name of the logger.
-
-    Returns:
-        A logger instance.
-    """
+def get_logger(name: str) -> logging.Logger:
     return logging.getLogger(f"currency_quote.{name}")
 
+
+def setup_logging(level: int = logging.INFO) -> logging.Logger:
+    """Configure only the library logger when explicitly requested."""
+    logger = logging.getLogger("currency_quote")
+    logger.setLevel(level)
+    if not any(
+        isinstance(handler, logging.StreamHandler)
+        and not isinstance(handler, logging.NullHandler)
+        for handler in logger.handlers
+    ):
+        logger.addHandler(logging.StreamHandler())
+    return logger

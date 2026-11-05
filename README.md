@@ -1,106 +1,69 @@
 # currency-quote
 
-> Complete solution for extracting currency pair quotes data.
+Lightweight Python client for current and historical currency quotes from [AwesomeAPI](https://docs.awesomeapi.com.br/api-de-moedas). No API key required. Python 3.9–3.13.
 
-[![PyPI - Status](https://img.shields.io/pypi/status/currency-quote?style=for-the-badge&logo=pypi)](https://pypi.org/project/currency-quote/)
-[![PyPI - Version](https://img.shields.io/pypi/v/currency-quote?style=for-the-badge&logo=pypi)](https://pypi.org/project/currency-quote/#history)
-[![PyPI - Downloads](https://img.shields.io/pypi/dm/currency-quote?style=for-the-badge&logo=pypi)](https://pypi.org/project/currency-quote/)
-![PyPI - Python Version](https://img.shields.io/pypi/pyversions/currency-quote?style=for-the-badge&logo=python)
+## Installation
 
-[![CI](https://img.shields.io/github/actions/workflow/status/ivdatahub/currency-quote/CI.yaml?&style=for-the-badge&logo=githubactions&cacheSeconds=60&label=Tests+and+pre+build)](https://github.com/ivdatahub/currency-quote/actions/workflows/CI.yaml)
-[![CD](https://img.shields.io/github/actions/workflow/status/ivdatahub/currency-quote/CD.yaml?&style=for-the-badge&logo=githubactions&cacheSeconds=60&event=release&label=Package+publication)](https://github.com/ivdatahub/currency-quote/actions/workflows/CD.yaml)
-[![Codecov](https://img.shields.io/codecov/c/github/ivdatahub/currency-quote?style=for-the-badge&logo=codecov)](https://app.codecov.io/gh/ivdatahub/currency-quote)
+```sh
+pip install currency-quote
+# Optional DataFrame export:
+pip install 'currency-quote[pandas]'
+```
 
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/ivanildobarauna-dev/currency-quote)
+Runtime dependency: `requests` (and its small HTTP dependencies); pandas, numpy and pytest are **not** required for ordinary use.
 
----
+## Quick start
 
-## Stack
+```python
+from decimal import Decimal
+from currency_quote import CurrencyQuoteClient
 
-![Python](https://img.shields.io/badge/-Python-05122A?style=flat&logo=python)&nbsp;
-![Poetry](https://img.shields.io/badge/-Poetry-05122A?style=flat&logo=poetry)&nbsp;
-![pytest](https://img.shields.io/badge/-pytest-05122A?style=flat&logo=pytest)&nbsp;
-![GitHub Actions](https://img.shields.io/badge/-GitHub_Actions-05122A?style=flat&logo=githubactions)&nbsp;
-![CodeCov](https://img.shields.io/badge/-CodeCov-05122A?style=flat&logo=codecov)&nbsp;
-![pypi](https://img.shields.io/badge/-pypi-05122A?style=flat&logo=pypi)&nbsp;
+with CurrencyQuoteClient("USD-BRL") as client:
+    latest = client.get_last_quote()[0]
+    print(latest.currency_pair, latest.bid_price)  # Decimal, safe for calculations
+    print(latest.bid_price * Decimal("100"))
+    print(client.get_history_quote("2024-06-03").to_dict())
+    history = client.get_history_range("2024-06-01", "2024-06-07")
+    print(history.to_dict())
+    # history.to_dataframe()  # requires the [pandas] extra
+```
 
----
+`CurrencyQuoteClient` accepts `"USD-BRL"` or a list of pairs; surrounding whitespace and case are normalized, and duplicates are removed. Results are `list`-like `QuoteList[CurrencyQuote]`; `bid_price`, `ask_price` and optional high/low/change values are `Decimal`. `to_dict()` returns JSON-ready decimal strings and the original eight-field schema. Supported dates: `YYYYMMDD` integers or strings, `YYYY-MM-DD`, `DD/MM/YYYY` and Python `date`/`datetime`. A historical date must precede **today in America/Sao_Paulo**. Historical ranges include both endpoints and return newest-first records grouped by requested pair; days without provider records are omitted (some weekend dates do have records).
 
-## Quick Start
+Both methods validate pairs against the provider by default. A per-client one-hour cache avoids fetching the available-pairs list for every call. Use `validate=False` to skip this lookup when your pairs are known; `timeout`, `retries` (extra attempts beyond the first) and `cache_ttl` can be set when constructing the client. A pooled HTTP connection is shared between validation and quotes. `repository=` and `validator=` accept implementations of the outbound ports for testing or alternate providers. Caller-injected HTTP sessions are not closed by the client.
+
+**Failure behavior is strict:** if any pair is invalid, missing from a current response, or has no data in the requested historical day/range, the whole call raises an exception rather than silently returning a partial result. A range with data in some windows and no data in others succeeds with available records. `CurrencyQuoteError` catches all expected library failures; subclasses `InvalidCurrencyError`, `InvalidCurrencyTypeError`, `InvalidDateError`, `InvalidConfigError`, `NoDataForDateError` and `CurrencyAPIError` allow targeted handling. Provider outages, timeouts and malformed JSON produce `CurrencyAPIError`.
+
+## Legacy client and migration to 6.0
 
 ```python
 from currency_quote import ClientBuilder
 
-# Single currency pair
-client = ClientBuilder(currency_list="USD-BRL")
-
-# Multiple currency pairs
-client = ClientBuilder(currency_list=["USD-BRL", "EUR-BRL"])
-
-# Get the latest quote
-print(client.get_last_quote())
-
-# Get historical quote for a specific date (YYYYMMDD)
-print(client.get_history_quote(reference_date=20220101))
+with ClientBuilder("USD-BRL") as client:
+    print(client.get_last_quote())           # list[dict]
+    print(client.get_history_quote(20240603))  # list[dict]
 ```
 
-### Last quote response
+The `ClientBuilder` constructor and methods still return lists of dictionaries with the **same eight keys**. In v5, current prices were strings but historical prices were floats; in v6 **both are decimal strings**. Use `Decimal(quote["bid_price"])` for arithmetic. Also new in v6: invalid dates and pairs, or missing historical data, raise typed exceptions instead of returning empty/partial lists or leaking `IndexError`. These are intentional breaking changes; migrate callers that depend on floats, silent filtering or empty results. New code should use `CurrencyQuoteClient` for typed `Decimal` results. Extended statistics are available as typed attributes on `CurrencyQuote`, without changing the legacy dict schema.
 
-```json
-[
-  {
-    "currency_pair": "USD-BRL",
-    "currency_pair_name": "Dólar Americano/Real Brasileiro",
-    "base_currency_code": "USD",
-    "quote_currency_code": "BRL",
-    "quote_timestamp": 1727201744,
-    "bid_price": "5.4579",
-    "ask_price": "5.4589",
-    "quote_extracted_at": 1727201753
-  }
-]
+## CLI
+
+```sh
+currency-quote USD-BRL EUR-BRL
+currency-quote USD-BRL --date 2024-06-03 --csv
+currency-quote USD-BRL --start 2024-06-01 --end 2024-06-07
+python -m currency_quote USD-BRL --no-validate
 ```
 
-### Historical quote response
+JSON is the default format; `--csv` emits CSV. Errors print to stderr with exit code 1. The CLI requires an internet connection.
 
-```json
-[
-  {
-    "currency_pair": "USD-BRL",
-    "currency_pair_name": "Dólar Americano/Real Brasileiro",
-    "base_currency_code": "USD",
-    "quote_currency_code": "BRL",
-    "quote_timestamp": 1719440767,
-    "bid_price": 5.524,
-    "ask_price": 5.5245,
-    "quote_extracted_at": 1727201753
-  }
-]
+## Development
+
+```sh
+poetry install
+poetry run pytest -q
+poetry run black --check src/currency_quote src/tests
+poetry build
 ```
 
----
-
-## Architecture
-
-This library follows **Hexagonal Architecture** (ports & adapters), decoupling core business logic from external data sources so any API can be swapped without touching domain code.
-
-![Hexagonal Design](./hexagonal_design_arch.png)
-
----
-
-## Highlights
-
-| Feature | Description |
-|---|---|
-| **Parameter Validation** | Currency pairs are validated against the data source before any request |
-| **Retry Strategy** | Configurable retry logic with exponential and linear backoff |
-| **Hexagonal Architecture** | Core logic fully decoupled from external APIs |
-| **CI/CD** | Automated testing, build, and PyPI publication pipelines |
-| **Code Quality** | Black formatting + Pylint enforced on every commit |
-
----
-
-## Contributing
-
-- [Contributing Guide](https://github.com/ivdatahub/currency-quote/blob/main/CONTRIBUTING.md)
-- [Code of Conduct](https://github.com/ivdatahub/currency-quote/blob/main/CODE_OF_CONDUCT.md)
+See [CONTRIBUTING.md](CONTRIBUTING.md) and [LICENSE](LICENSE).

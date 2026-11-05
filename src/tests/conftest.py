@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import Mock, patch
 
+
 @pytest.fixture
 def mock_currency_api_response():
     """Mock response for currency API."""
@@ -16,7 +17,7 @@ def mock_currency_api_response():
             "bid": "5.0876",
             "ask": "5.0891",
             "timestamp": "1614024000",
-            "create_date": "2023-01-01 13:00:00"
+            "create_date": "2023-01-01 13:00:00",
         },
         "EURBRL": {
             "code": "EUR",
@@ -29,9 +30,10 @@ def mock_currency_api_response():
             "bid": "6.0876",
             "ask": "6.0891",
             "timestamp": "1614024000",
-            "create_date": "2023-01-01 13:00:00"
-        }
+            "create_date": "2023-01-01 13:00:00",
+        },
     }
+
 
 @pytest.fixture
 def mock_currency_history_api_response():
@@ -48,9 +50,10 @@ def mock_currency_history_api_response():
             "bid": "5.0876",
             "ask": "5.0891",
             "timestamp": "1614024000",
-            "create_date": "2022-06-21 13:00:00"
+            "create_date": "2022-06-21 13:00:00",
         }
     ]
+
 
 @pytest.fixture
 def mock_validator_api_response():

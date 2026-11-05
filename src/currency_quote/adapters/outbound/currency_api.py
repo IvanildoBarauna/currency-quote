@@ -1,81 +1,122 @@
-from datetime import datetime
-from typing import List
-from api_to_dataframe import ClientBuilder, RetryStrategies
+"""AwesomeAPI adapter: schema validation and bounded daily history requests."""
+
+from datetime import date, timedelta
+from decimal import Decimal, InvalidOperation
+from typing import List, Mapping, Sequence
+from urllib.parse import quote
 
 from currency_quote.application.ports.outbound.currency_repository import (
     ICurrencyRepository,
 )
 from currency_quote.config.endpoints import API
-from currency_quote.domain.entities.currency import CurrencyQuote, CurrencyObject
-from currency_quote.utils.logger import get_logger
+from currency_quote.domain.entities.currency import CurrencyQuote
+from currency_quote.exceptions import CurrencyAPIError, NoDataForDateError
+from currency_quote.utils.dates import trading_date
+from currency_quote.utils.http import HTTPClient
 
-logger = get_logger("currency_api")
+_WINDOW_DAYS = 360
+
+
+def _as_decimal(value: object, field: str) -> Decimal:
+    try:
+        result = Decimal(str(value))
+        if not result.is_finite():
+            raise InvalidOperation
+        return result
+    except (InvalidOperation, TypeError, ValueError) as exc:
+        raise CurrencyAPIError(f"Malformed provider field {field}: {value!r}") from exc
+
+
+def _quote(pair: str, payload: object) -> CurrencyQuote:
+    if not isinstance(payload, Mapping):
+        raise CurrencyAPIError(f"Malformed quote for {pair}: expected an object")
+    try:
+        timestamp = int(payload["timestamp"])
+        base, target = pair.split("-")
+        name = payload.get("name") or f"{base}/{target}"
+        return CurrencyQuote(
+            currency_pair=pair,
+            currency_pair_name=str(name),
+            base_currency_code=str(payload.get("code") or base),
+            quote_currency_code=str(payload.get("codein") or target),
+            quote_timestamp=timestamp,
+            bid_price=_as_decimal(payload["bid"], "bid"),
+            ask_price=_as_decimal(payload["ask"], "ask"),
+            high_price=(
+                _as_decimal(payload["high"], "high")
+                if payload.get("high") is not None
+                else None
+            ),
+            low_price=(
+                _as_decimal(payload["low"], "low")
+                if payload.get("low") is not None
+                else None
+            ),
+            var_bid=(
+                _as_decimal(payload["varBid"], "varBid")
+                if payload.get("varBid") is not None
+                else None
+            ),
+            pct_change=(
+                _as_decimal(payload["pctChange"], "pctChange")
+                if payload.get("pctChange") is not None
+                else None
+            ),
+        )
+    except (KeyError, TypeError, ValueError, OverflowError) as exc:
+        raise CurrencyAPIError(f"Malformed quote for {pair}: {exc}") from exc
+
 
 class CurrencyAPI(ICurrencyRepository):
-    """Repository implementation for fetching currency quotes from external API."""
-    def __init__(self, currency_obj: CurrencyObject):
-        self.currency_list = currency_obj.get_currency_list()
+    def __init__(self, http: HTTPClient):
+        self.http = http
 
-    def get_last_quote(self) -> List[CurrencyQuote]:
-        url = f"{API.ENDPOINT_LAST_COTATION}{','.join(self.currency_list)}"
-
-        client = ClientBuilder(
-            endpoint=url, retry_strategy=RetryStrategies.EXPONENTIAL_RETRY_STRATEGY
+    def get_last_quote(self, pairs: Sequence[str]) -> List[CurrencyQuote]:
+        url = API.ENDPOINT_LAST_COTATION + ",".join(
+            quote(pair, safe="-") for pair in pairs
         )
+        response = self.http.get(url)
+        if not isinstance(response, Mapping):
+            raise CurrencyAPIError("Current quote response must be a JSON object")
+        result = []
+        for pair in pairs:
+            raw = response.get(pair.replace("-", ""))
+            if raw is None:
+                raise NoDataForDateError(f"No current quote for {pair}")
+            result.append(_quote(pair, raw))
+        return result
 
-        response = client.get_api_data()
-
-        quote_list = []
-
-        for item in self.currency_list:
-            parsed_item = item.replace("-", "")
-            currency_quote = CurrencyQuote(
-                currency_pair=item,
-                currency_pair_name=response[parsed_item]["name"],
-                base_currency_code=response[parsed_item]["code"],
-                quote_currency_code=response[parsed_item]["codein"],
-                quote_timestamp=int(response[parsed_item]["timestamp"]),
-                bid_price=response[parsed_item]["bid"],
-                ask_price=response[parsed_item]["ask"],
+    def get_history(self, pair: str, start: date, end: date) -> List[CurrencyQuote]:
+        result = {}
+        cursor = start
+        while cursor <= end:
+            window_end = min(cursor + timedelta(days=_WINDOW_DAYS - 1), end)
+            begin = cursor.strftime("%Y%m%d")
+            finish = window_end.strftime("%Y%m%d")
+            path = f"{pair}/360" if cursor != window_end else pair
+            url = (
+                f"{API.ENDPOINT_HISTORY_COTATION}{quote(path, safe='-/')}"
+                f"?start_date={begin}&end_date={finish}"
             )
-
-            quote_list.append(currency_quote)
-
-        return quote_list
-
-    def get_history_quote(self, reference_date: int) -> List[CurrencyQuote]:
-        today = int(datetime.today().strftime("%Y%m%d"))
-
-        if (
-            reference_date > today
-            or reference_date == today
-            or len(str(reference_date)) != 8
-        ):
-            logger.error("Invalid reference date: %d", reference_date)
-            return []
-
-        quote_list = []
-
-        for item in self.currency_list:
-            url = (f"{API.ENDPOINT_HISTORY_COTATION}{item}"
-                   f"?start_date={reference_date}&end_date={reference_date}")
-
-            client = ClientBuilder(
-                endpoint=url, retry_strategy=RetryStrategies.EXPONENTIAL_RETRY_STRATEGY
-            )
-
-            response = client.get_api_data()
-
-            currency_quote = CurrencyQuote(
-                currency_pair=item,
-                currency_pair_name=response[0]["name"],
-                base_currency_code=response[0]["code"],
-                quote_currency_code=response[0]["codein"],
-                quote_timestamp=int(response[0]["timestamp"]),
-                bid_price=float(response[0]["bid"]),
-                ask_price=float(response[0]["ask"]),
-            )
-
-            quote_list.append(currency_quote)
-
-        return quote_list
+            try:
+                response = self.http.get(url)
+            except CurrencyAPIError as exc:
+                if exc.status_code != 404:
+                    raise
+                response = []  # the provider has no daily archive in this window
+            if not isinstance(response, list):
+                raise CurrencyAPIError(
+                    f"History response for {pair} must be a JSON list"
+                )
+            for entry in response:
+                parsed = _quote(pair, entry)
+                try:
+                    day = trading_date(entry, parsed.quote_timestamp)
+                except (ValueError, OverflowError, OSError) as exc:
+                    raise CurrencyAPIError(
+                        f"Malformed trading timestamp for {pair}"
+                    ) from exc
+                if start <= day <= end:
+                    result[parsed.quote_timestamp] = parsed
+            cursor = window_end + timedelta(days=1)
+        return list(result.values())

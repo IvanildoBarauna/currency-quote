@@ -1,36 +1,47 @@
 [tool.poetry]
 name = "currency-quote"
-version = "5.0.7"
-description = "Complete solution for extracting currency pair quotes data. With comprehensive testing, parameter validation, flexible configuration management, Hexagonal Architecture, CI/CD pipelines, code quality tools, and detailed documentation."
+version = "6.0.0"
+description = "Lightweight Python client for current and historical AwesomeAPI currency exchange quotes."
 authors = ["IvanildoBarauna <ivanildo.jnr@outlook.com>"]
 readme = "README.md"
 license = "MIT"
+packages = [{include = "currency_quote", from = "src"}]
+include = ["src/currency_quote/py.typed"]
+keywords = ["currency", "exchange-rate", "forex", "quotes", "brazil", "awesomeapi"]
 
 classifiers=[
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Typing :: Typed",
 ]
 
 
 [tool.poetry.urls]
-Homepage = "https://pypi.org/project/currency-quote-wrapper"
-ArchDesign = "https://github.com/IvanildoBarauna/currency-quote-wrapper/blob/main/hexagonal_design_arch.png"
-Repository = "https://github.com/IvanildoBarauna/currency-quote-wrapper"
-README = "https://github.com/IvanildoBarauna/currency-quote-wrapper/blob/main/README.md"
-Issues = "https://github.com/IvanildoBarauna/currency-quote-wrapper/issues"
+Homepage = "https://github.com/IvanildoBarauna/currency-quote"
+ArchDesign = "https://github.com/IvanildoBarauna/currency-quote/blob/main/hexagonal_design_arch.png"
+Repository = "https://github.com/IvanildoBarauna/currency-quote"
+README = "https://github.com/IvanildoBarauna/currency-quote/blob/main/README.md"
+Issues = "https://github.com/IvanildoBarauna/currency-quote/issues"
 
-
-[tool.setuptools.packages.find]
-where = ["src/"]
-include = ["currency_quote*"]
 
 [tool.poetry.dependencies]
 python = "^3.9"
-pytest = "^8.3.4"
-api-to-dataframe = "^2.0.0"
+requests = ">=2.32,<3"
+pandas = {version = ">=2.0,<3", optional = true}
+tzdata = {version = ">=2024.1", markers = "sys_platform == 'win32'"}
+
+[tool.poetry.extras]
+pandas = ["pandas"]
+
+[tool.poetry.scripts]
+currency-quote = "currency_quote.__main__:main"
 
 [tool.poetry.group.dev.dependencies]
 coverage = "^7.5.4"
@@ -48,6 +59,9 @@ enable = true
 versioning = "semantic"
 
 [tool.black]
+
+[tool.coverage.run]
+source = ["currency_quote"]
 
 [tool.pylint.'MESSAGES CONTROL']
 disable = [

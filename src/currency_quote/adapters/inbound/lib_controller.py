@@ -1,62 +1,30 @@
-from typing import Union
+"""Legacy facade with the original list-of-dictionaries response shape."""
+
+from typing import Dict, List, Union
+
 from currency_quote.application.ports.inbound.controller import IController
-from currency_quote.application.use_cases.get_last_currency_quote import (
-    GetLastCurrencyQuoteUseCase,
-)
-from currency_quote.application.use_cases.get_history_currency_quote import (
-    GetHistCurrencyQuoteUseCase,
-)
-from currency_quote.domain.entities.currency import CurrencyObject
+from currency_quote.client import CurrencyQuoteClient
 
 
 class ClientBuilder(IController):
-    def __init__(self, currency_list: Union[list, str]):
+    """v5-style dict client. Prices are now decimal strings for both endpoints."""
+
+    def __init__(self, currency_list: Union[List[str], str], **options):
         self.currency_list = currency_list
-        self.currency_obj = CurrencyObject(self.currency_list)
+        self._client = CurrencyQuoteClient(currency_list, **options)
+        self.currency_obj = self._client.currency_obj
 
-    def get_last_quote(self) -> list:
-        use_case_result = GetLastCurrencyQuoteUseCase.execute(
-            currency_obj=self.currency_obj
-        )
+    def get_last_quote(self) -> List[Dict[str, object]]:
+        return self._client.get_last_quote().to_dict()
 
-        controller_return = []
+    def get_history_quote(self, reference_date: int) -> List[Dict[str, object]]:
+        return self._client.get_history_quote(reference_date).to_dict()
 
-        for item in use_case_result:
-            dic = {
-                "currency_pair": item.currency_pair,
-                "currency_pair_name": item.currency_pair_name,
-                "base_currency_code": item.base_currency_code,
-                "quote_currency_code": item.quote_currency_code,
-                "quote_timestamp": item.quote_timestamp,
-                "bid_price": item.bid_price,
-                "ask_price": item.ask_price,
-                "quote_extracted_at": item.quote_extracted_at,
-            }
+    def close(self) -> None:
+        self._client.close()
 
-            controller_return.append(dic)
+    def __enter__(self):
+        return self
 
-        return controller_return
-
-    def get_history_quote(self, reference_date: int) -> list:
-        use_case_result = GetHistCurrencyQuoteUseCase.execute(
-            currency_obj=self.currency_obj,
-            reference_date=reference_date,
-        )
-
-        use_case_result_parsed = []
-
-        for item in use_case_result:
-            dic = {
-                "currency_pair": item.currency_pair,
-                "currency_pair_name": item.currency_pair_name,
-                "base_currency_code": item.base_currency_code,
-                "quote_currency_code": item.quote_currency_code,
-                "quote_timestamp": item.quote_timestamp,
-                "bid_price": item.bid_price,
-                "ask_price": item.ask_price,
-                "quote_extracted_at": item.quote_extracted_at,
-            }
-
-            use_case_result_parsed.append(dic)
-
-        return use_case_result_parsed
+    def __exit__(self, *_exc):
+        self.close()

@@ -1,13 +1,15 @@
-# src/currency_quote/application/use_cases/validate_currency.py
-from currency_quote.domain.services.validate_currency import CurrencyValidatorService
-from currency_quote.adapters.outbound.currency_validator_api import CurrencyValidatorAPI
-from currency_quote.domain.entities.currency import CurrencyObject
+"""Pair validation policy independent of the AwesomeAPI adapter."""
+
+from typing import Sequence
+
+from currency_quote.application.ports.outbound.currency_validator_repository import (
+    ICurrencyValidator,
+)
+from currency_quote.exceptions import InvalidCurrencyError
 
 
-class ValidateCurrencyUseCase:
-    @staticmethod
-    def execute(currency_quote: CurrencyObject) -> CurrencyObject:
-        validator_service = CurrencyValidatorService(
-            currency=currency_quote, currency_validator=CurrencyValidatorAPI
-        )
-        return validator_service.validate_currency_code()
+def validate_pairs(pairs: Sequence[str], validator: ICurrencyValidator) -> None:
+    available = validator.available_pairs()
+    invalid = [pair for pair in pairs if pair not in available]
+    if invalid:
+        raise InvalidCurrencyError(f"Unsupported currency pairs: {invalid}")
