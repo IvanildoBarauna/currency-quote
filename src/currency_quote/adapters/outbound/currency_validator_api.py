@@ -1,28 +1,35 @@
-# src/currency_quote/adapters/outbound/currency_validator_api.py
-from api_to_dataframe import ClientBuilder, RetryStrategies
-from currency_quote.config.endpoints import API
+"""Provider-supported pairs, cached per client for a bounded time."""
+
+from threading import Lock
+from time import monotonic
+from typing import Set
+
 from currency_quote.application.ports.outbound.currency_validator_repository import (
     ICurrencyValidator,
 )
-from currency_quote.domain.entities.currency import CurrencyObject
+from currency_quote.config.endpoints import API
+from currency_quote.exceptions import CurrencyAPIError, InvalidConfigError
+from currency_quote.utils.http import HTTPClient
 
 
 class CurrencyValidatorAPI(ICurrencyValidator):
-    def __init__(self, currency_quote: CurrencyObject) -> None:
-        self.currency_quote = currency_quote
+    def __init__(self, http: HTTPClient, ttl_seconds: float = 3600):
+        if ttl_seconds <= 0:
+            raise InvalidConfigError("ttl_seconds must be positive")
+        self.http = http
+        self.ttl_seconds = ttl_seconds
+        self._lock = Lock()
+        self._value = None
+        self._expires_at = 0.0
 
-    def validate_currency_code(self) -> list:
-        client = ClientBuilder(
-            endpoint=API.ENDPOINT_AVALIABLE_PARITIES,
-            retry_strategy=RetryStrategies.LINEAR_RETRY_STRATEGY,
-        )
-
-        valid_list = client.get_api_data()
-
-        validated_list = []
-
-        for currency_code in self.currency_quote.get_currency_list():
-            if currency_code in valid_list:
-                validated_list.append(currency_code)
-
-        return validated_list
+    def available_pairs(self) -> Set[str]:
+        with self._lock:
+            if self._value is None or monotonic() >= self._expires_at:
+                response = self.http.get(API.ENDPOINT_AVALIABLE_PARITIES)
+                if not isinstance(response, dict):
+                    raise CurrencyAPIError(
+                        "Available-pairs response must be a JSON object"
+                    )
+                self._value = set(response)
+                self._expires_at = monotonic() + self.ttl_seconds
+            return set(self._value)

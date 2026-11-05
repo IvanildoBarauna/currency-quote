@@ -10,7 +10,25 @@ jobs:
   test:
     uses: ivanildobarauna/github-workflows/.github/workflows/tests-python-poetry.yml@v1
     with:
-      python-versions: '["3.9"]'
+      python-versions: '["3.9", "3.10", "3.11", "3.12", "3.13"]'
+      # Poetry 2.2 supports Python 3.9 and the lockfile v2.1 format.
+      poetry-version: "2.2.1"
       environment: Development
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: snok/install-poetry@v1
+        with:
+          version: "2.3.4"
+      - run: poetry install --no-interaction
+      - run: poetry run black --check src/currency_quote src/tests
+      - run: poetry run pylint src/currency_quote
+      - run: poetry run coverage run -m pytest && poetry run coverage report --fail-under=90
+      - run: poetry build

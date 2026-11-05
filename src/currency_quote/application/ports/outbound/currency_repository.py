@@ -1,18 +1,17 @@
-# src/currency_quote/application/ports/outbound/currency_validator_port.py
+"""Port implemented by a quote provider."""
+
 from abc import ABC, abstractmethod
-from typing import List
-from currency_quote.domain.entities.currency import CurrencyQuote, CurrencyObject
+from datetime import date
+from typing import List, Sequence
+
+from currency_quote.domain.entities.currency import CurrencyQuote
 
 
 class ICurrencyRepository(ABC):
     @abstractmethod
-    def __init__(self, currency_obj: CurrencyObject):
-        pass
+    def get_last_quote(self, pairs: Sequence[str]) -> List[CurrencyQuote]:
+        """Fetch one current quote per requested pair."""
 
     @abstractmethod
-    def get_last_quote(self) -> List[CurrencyQuote]:
-        pass
-
-    @abstractmethod
-    def get_history_quote(self, reference_date: int) -> List[CurrencyQuote]:
-        pass
+    def get_history(self, pair: str, start: date, end: date) -> List[CurrencyQuote]:
+        """Fetch all available quotes within an inclusive calendar interval."""

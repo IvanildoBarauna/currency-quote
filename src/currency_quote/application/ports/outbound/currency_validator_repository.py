@@ -1,13 +1,10 @@
-# src/currency_quote/application/ports/outbound/currency_validator_port.py
+"""Port implemented by a supported-pairs provider."""
+
 from abc import ABC, abstractmethod
-from currency_quote.domain.entities.currency import CurrencyQuote
+from typing import Set
 
 
 class ICurrencyValidator(ABC):
     @abstractmethod
-    def __init__(self, currency_quote: CurrencyQuote):
-        pass
-
-    @abstractmethod
-    def validate_currency_code(self) -> list:
-        pass
+    def available_pairs(self) -> Set[str]:
+        """Get the available currency pairs, using a cache where appropriate."""
