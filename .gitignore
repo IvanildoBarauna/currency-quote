@@ -165,3 +165,7 @@ cython_debug/
 *.http
 .idea/httpRequests*
 .idea/dataSources*
+# IDE / local artifacts
+.idea/
+.xml
+.coverage

@@ -1,3 +1,0 @@
-<component name="DependencyValidationManager">
-  <scope name="currency-quote-wrapper" pattern="file[currency-quote-wrapper]:src/*" />
-</component>

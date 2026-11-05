@@ -1,6 +1,9 @@
-import pytest
-from currency_quote.domain.entities.currency import CurrencyObject, CurrencyQuote
 from datetime import datetime
+from unittest.mock import patch
+
+import pytest
+
+from currency_quote.domain.entities.currency import CurrencyObject, CurrencyQuote
 
 
 def test_currency_object():
@@ -75,9 +78,9 @@ def test_currency_quote_creation():
         quote_currency_code="BRL",
         quote_timestamp=1614024000,
         bid_price=5.0876,
-        ask_price=5.0891
+        ask_price=5.0891,
     )
-    
+
     # Verify all attributes are set correctly
     assert quote.currency_pair == "USD-BRL"
     assert quote.currency_pair_name == "Dólar Americano/Real Brasileiro"
@@ -87,3 +90,77 @@ def test_currency_quote_creation():
     assert quote.bid_price == 5.0876
     assert quote.ask_price == 5.0891
     assert quote.quote_extracted_at <= int(datetime.now().timestamp())
+
+
+def test_currency_quote_extracted_at_is_per_instance():
+    """Regression: the timestamp default must be evaluated per instance, not at import."""
+    first = CurrencyQuote(
+        currency_pair="USD-BRL",
+        currency_pair_name="Dólar Americano/Real Brasileiro",
+        base_currency_code="USD",
+        quote_currency_code="BRL",
+        quote_timestamp=1614024000,
+        bid_price=5.0876,
+        ask_price=5.0891,
+    )
+    frozen = 1614024000
+    with patch("currency_quote.domain.entities.currency.datetime") as mock_datetime:
+        mock_datetime.now.return_value.timestamp.return_value = frozen
+        second = CurrencyQuote(
+            currency_pair="USD-BRL",
+            currency_pair_name="Dólar Americano/Real Brasileiro",
+            base_currency_code="USD",
+            quote_currency_code="BRL",
+            quote_timestamp=1614024001,
+            bid_price=5.0876,
+            ask_price=5.0891,
+        )
+    assert second.quote_extracted_at == frozen
+    assert (
+        second.quote_extracted_at != first.quote_extracted_at
+        or first.quote_extracted_at == frozen
+    )
+
+
+def test_currency_quote_optional_statistics_default_to_none():
+    quote = CurrencyQuote(
+        currency_pair="USD-BRL",
+        currency_pair_name="Dólar Americano/Real Brasileiro",
+        base_currency_code="USD",
+        quote_currency_code="BRL",
+        quote_timestamp=1614024000,
+        bid_price=5.0876,
+        ask_price=5.0891,
+    )
+    assert quote.high_price is None
+    assert quote.low_price is None
+    assert quote.var_bid is None
+    assert quote.pct_change is None
+
+
+def test_currency_quote_to_dict_shape():
+    quote = CurrencyQuote(
+        currency_pair="USD-BRL",
+        currency_pair_name="Dólar Americano/Real Brasileiro",
+        base_currency_code="USD",
+        quote_currency_code="BRL",
+        quote_timestamp=1614024000,
+        bid_price=5.0876,
+        ask_price=5.0891,
+    )
+    payload = quote.to_dict()
+    assert payload["bid_price"] == 5.0876
+    assert set(payload) == {
+        "currency_pair",
+        "currency_pair_name",
+        "base_currency_code",
+        "quote_currency_code",
+        "quote_timestamp",
+        "bid_price",
+        "ask_price",
+        "quote_extracted_at",
+        "high_price",
+        "low_price",
+        "var_bid",
+        "pct_change",
+    }

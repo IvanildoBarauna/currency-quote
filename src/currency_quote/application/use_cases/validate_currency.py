@@ -5,6 +5,8 @@ from currency_quote.domain.entities.currency import CurrencyObject
 
 
 class ValidateCurrencyUseCase:
+    """Filters pairs through the online validator service."""
+
     @staticmethod
     def execute(currency_quote: CurrencyObject) -> CurrencyObject:
         validator_service = CurrencyValidatorService(
