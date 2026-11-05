@@ -10,7 +10,7 @@ pip install currency-quote
 pip install 'currency-quote[pandas]'
 ```
 
-Runtime dependency: `requests` (and its small HTTP dependencies); pandas, numpy and pytest are **not** required for ordinary use.
+Runtime dependencies: `requests` (and its HTTP dependencies) and `tzdata` (so provider-local dates also work in minimal containers); pandas, numpy and pytest are **not** required for ordinary use.
 
 ## Quick start
 

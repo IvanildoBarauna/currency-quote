@@ -1469,7 +1469,6 @@ description = "Provider of IANA time zone data"
 optional = false
 python-versions = ">=2"
 groups = ["main"]
-markers = "extra == \"pandas\" or sys_platform == \"win32\""
 files = [
     {file = "tzdata-2026.2-py2.py3-none-any.whl", hash = "sha256:bbe9af844f658da81a5f95019480da3a89415801f6cc966806612cc7169bffe7"},
     {file = "tzdata-2026.2.tar.gz", hash = "sha256:9173fde7d80d9018e02a662e168e5a2d04f87c41ea174b139fbef642eda62d10"},
@@ -1540,4 +1539,4 @@ pandas = ["pandas"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.9"
-content-hash = "38bbc8879f6454876c2159612c95488de1896f20ed3bca5b5cf54353e4410296"
+content-hash = "38b367256645c471ad330b1738be494b946cf113ce7be3d59e52cabb68d1de8b"

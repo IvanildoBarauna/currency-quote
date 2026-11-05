@@ -2,6 +2,7 @@
 
 import json
 import logging
+import os
 import subprocess
 import sys
 from unittest.mock import Mock
@@ -66,6 +67,24 @@ def test_import_does_not_modify_root_or_configure_package_stream():
     before, after, handlers = json.loads(process.stdout)
     assert before == after
     assert handlers == ["NullHandler"]
+
+
+def test_import_without_system_timezone_database():
+    """A minimal container can depend exclusively on the bundled tzdata package."""
+    code = (
+        "from zoneinfo import TZPATH; assert not TZPATH; "
+        "import currency_quote; "
+        "from currency_quote.utils.dates import PROVIDER_TIMEZONE; "
+        "print(PROVIDER_TIMEZONE.key)"
+    )
+    process = subprocess.run(
+        [sys.executable, "-c", code],
+        capture_output=True,
+        text=True,
+        check=True,
+        env={**os.environ, "PYTHONTZPATH": ""},
+    )
+    assert process.stdout.strip() == "America/Sao_Paulo"
 
 
 @pytest.mark.parametrize(
