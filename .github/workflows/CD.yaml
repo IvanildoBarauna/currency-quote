@@ -12,5 +12,6 @@ jobs:
     uses: ivanildobarauna/github-workflows/.github/workflows/publish-python-package.yml@v1
     with:
       python-version: "3.9"
+      poetry-version: "2.2.1"
     secrets:
       PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
