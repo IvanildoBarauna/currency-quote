@@ -67,3 +67,17 @@ poetry build
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) and [LICENSE](LICENSE).
+
+For maintainers and coding agents, see [AGENTS.md](AGENTS.md) and the
+[changelog](CHANGELOG.md). Security reports should follow
+[SECURITY.md](SECURITY.md).
+
+## Release workflow
+
+`pyproject.toml` proposes version **6.0.0** (latest published version: 5.0.7).
+A merged PR targeting `main` must have the `deployable` label to start the
+publishing job. GitHub's `Production` environment then **requires manual
+approval** before a v6.0.0 GitHub release and PyPI upload; merge alone does not
+complete publication. The `PYPI_TOKEN` secret must be configured. Automatic
+Claude Code Review on PR opening was removed; `@claude` is still opt-in in
+comments/reviews/issues.
